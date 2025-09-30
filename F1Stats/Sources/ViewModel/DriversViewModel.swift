@@ -12,8 +12,11 @@ import Combine
 final class DriversViewModel: ObservableObject {
     @Published private(set) var drivers: [Driver]
     
+    private let _name: String = "DriversViewModel"
     private let driverRepository: DriverRepository
     private var cancellables = Set<AnyCancellable>()
+    private var getAllDriversTask: Task<Void, Never>?
+    private var getAllDriversTaskId: UUID?
     
     init(driverRepository: DriverRepository) {
         self.driverRepository = driverRepository
@@ -31,8 +34,21 @@ final class DriversViewModel: ObservableObject {
 
 extension DriversViewModel {
     func refresh() {
-        Task {
-            await driverRepository.getAllDrivers()
+        getAllDriversTask?.cancel()
+        getAllDriversTaskId = UUID()
+        let currentTaskId = getAllDriversTaskId
+        getAllDriversTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let result = await self.driverRepository.getAllDrivers()
+                try Task.checkCancellation()
+                guard currentTaskId == self.getAllDriversTaskId else { return }
+                self.drivers = result
+            } catch is CancellationError {
+                // Do nothing
+            } catch let error {
+                debugPrint("\(_name): \(String(describing: error))")
+            }
         }
     }
 }

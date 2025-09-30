@@ -8,13 +8,11 @@
 import Foundation
 import Combine
 
-final class DriverService {
+actor DriverService {
     // Singleton
     static let shared: DriverService = .init()
     
     private let _name: String = "DriverService"
-    
-    init() {}
 }
 
 extension DriverService {
